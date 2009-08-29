@@ -8,7 +8,7 @@ use WWW::VieDeMerde;
 
 use base qw(Bot::BasicBot::Pluggable::Module);
 
-our $VERSION = '0.1';
+our $VERSION = '0.11';
 
 sub render {
     my $msg = shift;
