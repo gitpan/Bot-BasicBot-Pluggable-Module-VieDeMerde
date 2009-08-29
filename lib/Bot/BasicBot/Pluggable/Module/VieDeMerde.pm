@@ -8,7 +8,7 @@ use WWW::VieDeMerde;
 
 use base qw(Bot::BasicBot::Pluggable::Module);
 
-our $VERSION = '0.11';
+our $VERSION = '0.12';
 
 sub render {
     my $msg = shift;
@@ -50,10 +50,10 @@ sub said {
             @items = $vdm->top()       if $1 eq 'all';
             if (@items) {
                 if (defined($2)) {
-                    return render($items[int(rand(@items))]);
+                    return join("\n", map { render($_) } @items);
                 }
                 else {
-                    return join("\n", map { render($_) } @items);
+                    return render($items[int(rand(@items))]);
                 }
             }
             else {
@@ -68,10 +68,10 @@ sub said {
             @items = $vdm->flop()       if $1 eq 'all';
             if (@items) {
                 if (defined($2)) {
-                    return render($items[int(rand(@items))]);
+                    return join("\n", map { render($_) } @items);
                 }
                 else {
-                    return join("\n", map { render($_) } @items);
+                    return render($items[int(rand(@items))]);
                 }
             }
             else {
@@ -85,9 +85,7 @@ sub said {
                     return join("\n", map { render($_) } @items);
                 }
                 else {
-                    my $count = @items;
-                    my $r = int(rand(@items));
-                    return render($items[$r]);
+                    return render($items[int(rand(@items))]);
                 }
             }
             else {
