@@ -8,13 +8,21 @@ use WWW::VieDeMerde;
 
 use base qw(Bot::BasicBot::Pluggable::Module);
 
-our $VERSION = '0.12';
+our $VERSION = '0.2';
 
-sub render {
+sub render_item {
     my $msg = shift;
     my $response = decode_entities($msg->text);
-    $response .= " #" . $msg->id;
-    $response .= " (+" . $msg->agree . ",-" . $msg->deserved . ")";
+    $response .= ' #' . $msg->id;
+    $response .= ' (+' . $msg->agree . ',-' . $msg->deserved . ')';
+
+    return $response;
+}
+
+sub render_comment {
+    my $msg = shift;
+    my $response = decode_entities($msg->text);
+    $response .= ' (' . $msg->author . ')';
 
     return $response;
 }
@@ -37,10 +45,40 @@ sub said {
     my $msg;
     if ($cmd) {
         if ($cmd eq 'random') {
-            return render($vdm->random());
+            return render_item($vdm->random());
+        }
+        if ($cmd =~ /comments\s+#?(\d+)(?:\s+(?:(?:#?(\d+))|(--all)))?/) {
+            my @comments = $vdm->comments($1);
+            if (@comments) {
+                if (defined($3)) {
+                    return join("\n", map { render_comment($_) } @comments[0,15]);
+                }
+                else {
+                    if (defined($2)) {
+                        return 'Error comments begin at #1' if $2 == 0;
+                        return "Warning, your request can be accurate due to deleted comments\n". render_comment($comments[$2 - 1]);
+                    }
+                    else {
+                        return render_comment($comments[int(rand(@comments))]);
+                    }
+                }
+            }
+            else {
+                return "No comments found for id $1 in viedemerde.fr" if $lang eq 'fr';
+                return "No comments found for id $1 in fmylife.com" if $lang eq 'en';
+                return "No comments found for id $1 and language $lang";
+            }
         }
         if ($cmd =~ /#?(\d+)/) {
-            return render($vdm->get($1));
+            my $item = $vdm->get($1);
+            if (defined $item) {
+                return render_item($item);
+            }
+            else {
+                return "No item found for id $1 in viedemerde.fr" if $lang eq 'fr';
+                return "No item found for id $1 in fmylife.com" if $lang eq 'en';
+                return "No item found for id $1 and language $lang";
+            }
         }
         if ($cmd =~ /top\s*(day|week|month|all)(\s+--all)?/) {
             my @items;
@@ -50,10 +88,10 @@ sub said {
             @items = $vdm->top()       if $1 eq 'all';
             if (@items) {
                 if (defined($2)) {
-                    return join("\n", map { render($_) } @items);
+                    return join("\n", map { render_item($_) } @items);
                 }
                 else {
-                    return render($items[int(rand(@items))]);
+                    return render_item($items[int(rand(@items))]);
                 }
             }
             else {
@@ -68,10 +106,10 @@ sub said {
             @items = $vdm->flop()       if $1 eq 'all';
             if (@items) {
                 if (defined($2)) {
-                    return join("\n", map { render($_) } @items);
+                    return join("\n", map { render_item($_) } @items);
                 }
                 else {
-                    return render($items[int(rand(@items))]);
+                    return render_item($items[int(rand(@items))]);
                 }
             }
             else {
@@ -82,10 +120,10 @@ sub said {
             my @items = $vdm->last();
             if (@items) {
                 if (defined($1)) {
-                    return join("\n", map { render($_) } @items);
+                    return join("\n", map { render_item($_) } @items);
                 }
                 else {
-                    return render($items[int(rand(@items))]);
+                    return render_item($items[int(rand(@items))]);
                 }
             }
             else {
@@ -94,13 +132,18 @@ sub said {
         }
         if ($cmd =~ /last/) {
             my @items = $vdm->last();
-            return render($items[0]);
+            return render_item($items[0]);
         }
         return "Unknown command '$site $cmd' in Bot::BasicBot::Pluggable::Module::VieDeMerde";
     }
 }
 
-sub help {"Display a quote from viedemerde.fr or fmylife.com.\nUsage vdm, vdm #id, vdm last, vdm lasts [--all], vdm top day|week|month|global [--all], vdm flop day|week|month|global [--all].\nYou can replace vdm by fml.\nYou can prefix every command with a @ for drop-in compatibilty with the geekquotes module for supybot."}
+sub help {
+    "Display a quote from viedemerde.fr or fmylife.com.\n"
+        . "Usage vdm, vdm #id, vdm comments #id, vdm last, vdm lasts [--all], vdm top day|week|month|global [--all], vdm flop day|week|month|global [--all], vdm comments #id [#id_comment|--all].\n
+"
+. "You can replace vdm by fml.\nYou can prefix every command with a @ for drop-in compatibilty with the geekquotes module for supybot."
+}
 
 1;
 
@@ -138,15 +181,25 @@ Read the commands and return the answers.
 
 Display the help
 
-=head2 render
+=head2 render_item
 
 Format an item for displaying
+
+=head2 render_comment
+
+Format an comment for displaying
 
 =head1 AUTHOR
 
 Olivier Schwander, C<< <iderrick at cpan.org> >>
 
 =head1 BUGS
+
+The comment returned by 'comment #id' may not be the same as the comment
+id on the website since deleted comments keeps an id on the website but
+are not returned by the API. It may be possible to avoid this by doing a
+linear search for a given id in the returned list, but it may be very
+slow on IRC.
 
 Please report any bugs or feature requests to C<bug-bot-basicbot-pluggable-module-watchlinks at rt.cpan.org>, or through
 the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=Bot-BasicBot-Pluggable-Module-VieDeMerde>.  I will be notified, and then you'll

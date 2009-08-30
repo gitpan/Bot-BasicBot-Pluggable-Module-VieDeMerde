@@ -9,6 +9,10 @@ my $builder = Module::Build->new(
     build_requires => {
         'Test::More' => 0,
     },
+    requires => {
+        'WWW::VieDeMerde' => 0.21,
+        'Bot::BasicBot::Pluggable' => 0,
+    },
     create_makefile_pl => 'traditional',
 );
 
